@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPN Панель Управления</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f6fa; color: #2c3e50; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 0; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        header h1 { text-align: center; font-size: 2.5em; margin-bottom: 10px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-btn { padding: 12px 24px; background: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .tab-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .tab-btn.active { background: #667eea; color: white; }
+        .tab-content { display: none; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .tab-content.active { display: block; }
+        .card { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #667eea; }
+        .card h3 { margin-bottom: 15px; color: #667eea; }
+        .btn { padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; transition: background 0.3s; }
+        .btn:hover { background: #5568d3; }
+        .btn-danger { background: #e74c3c; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-success { background: #27ae60; }
+        .btn-success:hover { background: #219a52; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s; }
+        input:focus, select:focus { outline: none; border-color: #667eea; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #667eea; color: white; }
+        tr:hover { background: #f5f6fa; }
+        .qr-code { max-width: 200px; margin: 10px auto; display: block; }
+        .config-box { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 6px; font-family: monospace; overflow-x: auto; margin: 10px 0; white-space: pre-wrap; word-break: break-all; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .status-active { background: #27ae60; color: white; }
+        .status-inactive { background: #95a5a6; color: white; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 12px; text-align: center; }
+        .stat-card h2 { font-size: 3em; margin-bottom: 10px; }
+        .protocol-info { background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .close-modal { float: right; font-size: 24px; cursor: pointer; color: #999; }
+        .close-modal:hover { color: #333; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        .auth-toggle { display: flex; gap: 10px; margin-bottom: 15px; }
+        .auth-toggle button { flex: 1; padding: 10px; border: 2px solid #ddd; background: white; border-radius: 6px; cursor: pointer; }
+        .auth-toggle button.active { border-color: #667eea; background: #667eea; color: white; }
+        #loginScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+        #loginScreen.hidden { display: none; }
+        .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 400px; }
+        .login-box h2 { text-align: center; margin-bottom: 30px; color: #667eea; }
+        .alert { padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen">
+        <div class="login-box">
+            <h2>🔐 VPN Панель</h2>
+            <div id="loginAlert"></div>
+            <input type="password" id="adminPassword" placeholder="Введите пароль администратора">
+            <button class="btn" style="width: 100%; margin-top: 15px;" onclick="login()">Войти</button>
+            <p style="text-align: center; margin-top: 15px; color: #666; font-size: 14px;">Пароль по умолчанию: admin123</p>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" style="display: none;">
+        <header>
+            <div class="container">
+                <h1>🚀 VPN Панель Управления</h1>
+                <p style="text-align: center; opacity: 0.9;">AmneziaWG • XRay VLESS • Hysteria 2 • Tuic • Shadowsocks • MTProxy</p>
+            </div>
+        </header>
+
+        <div class="container">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="showTab('status')">📊 Статус</button>
+                <button class="tab-btn" onclick="showTab('clients')">👥 Клиенты</button>
+                <button class="tab-btn" onclick="showTab('servers')">🌐 Серверы</button>
+                <button class="tab-btn" onclick="showTab('telegram')">🤖 Telegram Бот</button>
+            </div>
+
+            <!-- Status Tab -->
+            <div id="status" class="tab-content active">
+                <div class="grid">
+                    <div class="stat-card">
+                        <h2 id="totalClients">0</h2>
+                        <p>Всего клиентов</p>
+                    </div>
+                    <div class="stat-card">
+                        <h2 id="totalServers">0</h2>
+                        <p>Серверов</p>
+                    </div>
+                    <div class="stat-card">
+                        <h2 id="totalProtocols">6</h2>
+                        <p>Протоколов</p>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 30px;">
+                    <h3>🛡️ Протоколы устойчивые к блокировкам</h3>
+                    <div class="protocol-info">
+                        <strong>AmneziaWG 2.0</strong> - Модифицированный WireGuard с параметрами маскировки (Jc, Jmin, Jmax, S1, S2, H1-H4). Обходит DPI системы.
+                    </div>
+                    <div class="protocol-info">
+                        <strong>XRay VLESS Reality</strong> - Маскируется под обычный HTTPS трафик Microsoft. Невозможно отличить от легитимного трафика.
+                    </div>
+                    <div class="protocol-info">
+                        <strong>Hysteria 2</strong> - Протокол на базе QUIC с обфускацией salamander. Высокая скорость и устойчивость к блокировкам.
+                    </div>
+                    <div class="protocol-info">
+                        <strong>Tuic v5</strong> - Сверхбыстрый протокол на основе QUIC с шифрованием. Оптимизирован для сетей с потерями.
+                    </div>
+                    <div class="protocol-info">
+                        <strong>Shadowsocks 2022</strong> - Последняя версия с улучшенной криптографией AEAD. Классический обход блокировок.
+                    </div>
+                    <div class="protocol-info">
+                        <strong>MTProxy</strong> - Нативный прокси для Telegram. Работает через официальный клиент Telegram.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📈 Статистика по протоколам</h3>
+                    <div id="protocolStats"></div>
+                </div>
+            </div>
+
+            <!-- Clients Tab -->
+            <div id="clients" class="tab-content">
+                <div class="card">
+                    <h3>➕ Добавить клиента</h3>
+                    <div class="form-group">
+                        <label>Email / Имя клиента</label>
+                        <input type="text" id="clientEmail" placeholder="user@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Протокол</label>
+                        <select id="clientProtocol">
+                            <option value="amnezia">AmneziaWG 2.0</option>
+                            <option value="xray">XRay VLESS Reality</option>
+                            <option value="hysteria">Hysteria 2</option>
+                            <option value="tuic">Tuic v5</option>
+                            <option value="shadowsocks">Shadowsocks 2022</option>
+                            <option value="mtproxy">MTProxy (Telegram)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Сервер</label>
+                        <select id="clientServer"></select>
+                    </div>
+                    <button class="btn btn-success" onclick="addClient()">Создать клиента</button>
+                </div>
+
+                <div class="card">
+                    <h3>📋 Список клиентов</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Протокол</th>
+                                <th>IP</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientsTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Servers Tab -->
+            <div id="servers" class="tab-content">
+                <div class="card">
+                    <h3>🌐 Добавить сервер</h3>
+                    <div class="form-group">
+                        <label>Название сервера</label>
+                        <input type="text" id="serverName" placeholder="My Server">
+                    </div>
+                    <div class="form-group">
+                        <label>IP адрес</label>
+                        <input type="text" id="serverIp" placeholder="192.168.1.1">
+                    </div>
+                    <div class="form-group">
+                        <label>SSH порт</label>
+                        <input type="number" id="serverPort" value="22">
+                    </div>
+                    <div class="form-group">
+                        <label>SSH логин</label>
+                        <input type="text" id="serverUsername" placeholder="root">
+                    </div>
+                    <div class="auth-toggle">
+                        <button class="active" onclick="setAuthType('password')" id="authPassword">Пароль</button>
+                        <button onclick="setAuthType('key')" id="authKey">SSH Ключ</button>
+                    </div>
+                    <div class="form-group" id="passwordField">
+                        <label>SSH пароль</label>
+                        <input type="password" id="serverPassword" placeholder="Ваш пароль">
+                    </div>
+                    <div class="form-group" id="keyField" style="display: none;">
+                        <label>Путь к приватному ключу</label>
+                        <input type="text" id="serverKeyPath" placeholder="/root/.ssh/id_rsa">
+                    </div>
+                    <button class="btn btn-success" onclick="addServer()">Добавить и развернуть</button>
+                    <p style="margin-top: 10px; color: #666; font-size: 14px;">⚠️ Все протоколы будут установлены автоматически</p>
+                </div>
+
+                <div class="card">
+                    <h3>📋 Мои серверы</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>IP</th>
+                                <th>Логин</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="serversTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Telegram Tab -->
+            <div id="telegram" class="tab-content">
+                <div class="card">
+                    <h3>🤖 Настройка Telegram бота</h3>
+                    <div class="form-group">
+                        <label>Token бота от @BotFather</label>
+                        <input type="text" id="telegramToken" placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz">
+                    </div>
+                    <button class="btn btn-success" onclick="setupTelegram()">Сохранить токен</button>
+                </div>
+
+                <div class="card">
+                    <h3>📱 Команды бота</h3>
+                    <div class="protocol-info">
+                        <strong>/start</strong> - Главное меню с кнопками<br><br>
+                        <strong>📊 Статус</strong> - Показать статистику по всем протоколам<br><br>
+                        <strong>👥 Мои клиенты</strong> - Список ваших клиентов с возможностью получить QR код<br><br>
+                        <strong>➕ Добавить клиента</strong> - Создание нового клиента через интерфейс кнопок<br><br>
+                        <strong>🌐 Серверы</strong> - Информация о подключенных серверах<br><br>
+                        <strong>⚙️ Настройки</strong> - Ссылка на веб-панель
+                    </div>
+                    <p style="color: #666;">Бот автоматически отправляет QR коды для AmneziaWG и MTProxy, а также ссылки-конфиги для всех протоколов.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Config Modal -->
+    <div id="configModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h3 id="modalTitle">Конфигурация</h3>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentAuthType = 'password';
+        let serversList = [];
+
+        // Login
+        function login() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === 'admin123') {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('app').style.display = 'block';
+                loadStatus();
+                loadClients();
+                loadServers();
+            } else {
+                document.getElementById('loginAlert').innerHTML = '<div class="alert alert-error">Неверный пароль</div>';
+            }
+        }
+
+        // Tabs
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Auth toggle
+        function setAuthType(type) {
+            currentAuthType = type;
+            document.getElementById('authPassword').classList.toggle('active', type === 'password');
+            document.getElementById('authKey').classList.toggle('active', type === 'key');
+            document.getElementById('passwordField').style.display = type === 'password' ? 'block' : 'none';
+            document.getElementById('keyField').style.display = type === 'key' ? 'block' : 'none';
+        }
+
+        // Load status
+        async function loadStatus() {
+            const res = await fetch('/api/status');
+            const data = await res.json();
+            document.getElementById('totalClients').textContent = data.totalClients;
+            document.getElementById('totalServers').textContent = data.totalServers;
+
+            let statsHtml = '';
+            for (const [proto, count] of Object.entries(data.byProtocol || {})) {
+                statsHtml += `<div class="protocol-info"><strong>${proto}:</strong> ${count} клиентов</div>`;
+            }
+            document.getElementById('protocolStats').innerHTML = statsHtml || '<p>Нет клиентов</p>';
+        }
+
+        // Load clients
+        async function loadClients() {
+            const res = await fetch('/api/clients');
+            const clients = await res.json();
+            const tbody = document.getElementById('clientsTable');
+            tbody.innerHTML = '';
+
+            clients.forEach(client => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${client.email}</td>
+                    <td><span class="status-badge status-active">${client.protocol}</span></td>
+                    <td>${client.ip}</td>
+                    <td>
+                        <button class="btn" onclick="showConfig('${client.id}')">📱 Конфиг</button>
+                        <button class="btn btn-danger" onclick="deleteClient('${client.id}')">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Load servers
+        async function loadServers() {
+            const res = await fetch('/api/servers');
+            serversList = await res.json();
+            const tbody = document.getElementById('serversTable');
+            const select = document.getElementById('clientServer');
+            
+            tbody.innerHTML = '';
+            select.innerHTML = '';
+
+            serversList.forEach(server => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${server.name}</td>
+                    <td>${server.ip}</td>
+                    <td>${server.username}</td>
+                    <td><span class="status-badge status-active">Активен</span></td>
+                    <td><button class="btn btn-danger" onclick="deleteServer('${server.id}')">🗑️</button></td>
+                `;
+                tbody.appendChild(tr);
+
+                const option = document.createElement('option');
+                option.value = server.id;
+                option.textContent = server.name;
+                select.appendChild(option);
+            });
+
+            if (serversList.length === 0) {
+                select.innerHTML = '<option value="">Нет серверов</option>';
+            }
+        }
+
+        // Add client
+        async function addClient() {
+            const email = document.getElementById('clientEmail').value;
+            const protocol = document.getElementById('clientProtocol').value;
+            const serverId = document.getElementById('clientServer').value;
+
+            if (!email || !protocol) {
+                alert('Заполните все поля');
+                return;
+            }
+
+            const res = await fetch('/api/clients', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, protocol, serverId})
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                alert('Клиент создан!');
+                loadClients();
+                loadStatus();
+                showConfig(data.id);
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        }
+
+        // Delete client
+        async function deleteClient(id) {
+            if (!confirm('Удалить клиента?')) return;
+            await fetch(`/api/clients/${id}`, {method: 'DELETE'});
+            loadClients();
+            loadStatus();
+        }
+
+        // Add server
+        async function addServer() {
+            const name = document.getElementById('serverName').value;
+            const ip = document.getElementById('serverIp').value;
+            const port = document.getElementById('serverPort').value;
+            const username = document.getElementById('serverUsername').value;
+            const password = document.getElementById('serverPassword').value;
+            const keyPath = document.getElementById('serverKeyPath').value;
+
+            if (!name || !ip || !username) {
+                alert('Заполните обязательные поля');
+                return;
+            }
+
+            const body = {
+                name, ip, port, username,
+                authType: currentAuthType
+            };
+
+            if (currentAuthType === 'password') {
+                body.password = password;
+            } else {
+                body.keyPath = keyPath;
+            }
+
+            const btn = event.target;
+            btn.innerHTML = '<span class="loading"></span> Установка...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/servers', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)
+                });
+
+                const data = await res.json();
+                
+                let message = 'Сервер добавлен!\n\nРезультаты установки:\n';
+                for (const [proto, result] of Object.entries(data.deployment || {})) {
+                    message += `${proto}: ${result}\n`;
+                }
+                message += '\n✅ Логин для панели: admin\n🔑 Пароль: admin123\n🌐 URL: http://' + ip + ':3000';
+                
+                alert(message);
+                loadServers();
+                loadStatus();
+            } catch (err) {
+                alert('Ошибка: ' + err.message);
+            } finally {
+                btn.innerHTML = 'Добавить и развернуть';
+                btn.disabled = false;
+            }
+        }
+
+        // Delete server
+        async function deleteServer(id) {
+            if (!confirm('Удалить сервер?')) return;
+            await fetch(`/api/servers/${id}`, {method: 'DELETE'});
+            loadServers();
+            loadStatus();
+        }
+
+        // Setup Telegram
+        async function setupTelegram() {
+            const token = document.getElementById('telegramToken').value;
+            const res = await fetch('/api/telegram/setup', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({token})
+            });
+
+            if (res.ok) {
+                alert('Бот настроен! Откройте Telegram и нажмите /start');
+            } else {
+                alert('Ошибка настройки бота');
+            }
+        }
+
+        // Show config
+        async function showConfig(id) {
+            const res = await fetch(`/api/clients/${id}/config`);
+            const data = await res.json();
+            
+            const modal = document.getElementById('configModal');
+            const content = document.getElementById('modalContent');
+            
+            let qrHtml = '';
+            if (data.link.startsWith('wg://') || data.link.includes('proxy?')) {
+                try {
+                    const qrRes = await fetch(`/api/qr?data=${encodeURIComponent(data.link)}`);
+                    const qrData = await qrRes.blob();
+                    const qrUrl = URL.createObjectURL(qrData);
+                    qrHtml = `<img src="${qrUrl}" class="qr-code" alt="QR Code"><p style="text-align: center;">Отсканируйте QR код</p>`;
+                } catch (e) {
+                    qrHtml = '<p>QR код недоступен</p>';
+                }
+            }
+
+            content.innerHTML = `
+                ${qrHtml}
+                <div class="form-group">
+                    <label>Ссылка для импорта:</label>
+                    <input type="text" value="${data.link}" readonly onclick="this.select()">
+                </div>
+                <div class="form-group">
+                    <label>Конфиг файл:</label>
+                    <div class="config-box">${data.config}</div>
+                </div>
+                <button class="btn" onclick="navigator.clipboard.writeText('${data.link}')">📋 Копировать ссылку</button>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('configModal').classList.remove('active');
+        }
+
+        // Close modal on outside click
+        window.onclick = function(event) {
+            const modal = document.getElementById('configModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Auto-refresh status
+        setInterval(loadStatus, 30000);
+    </script>
+</body>
+</html>

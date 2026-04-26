@@ -1,0 +1,12 @@
+```
+# Dependencies
+node_modules/
+
+# Data files
+vpn-panel/data/
+
+# Environment
+.env
+.env.local
+.env.*
+```
